@@ -30,6 +30,8 @@ CLIPS = [
     ('zin/bijna', 'Bijna!'),
     ('zin/jouw-klok-zegt', 'Jouw klok zegt'),
     ('zin/probeer-het-nog-eens', 'Probeer het nog eens.'),
+    ('zin/hoe-laat-is-het', 'Hoe laat is het?'),
+    ('zin/niet-gehoord', 'Ik heb het niet goed gehoord.'),
 ]
 
 if __name__ == '__main__':
