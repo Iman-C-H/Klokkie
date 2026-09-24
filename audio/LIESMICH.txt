@@ -1,0 +1,3 @@
+Hier landen die Sprachdateien (tijd/*.mp3, zin/*.mp3, index.json).
+Erzeugen: siehe README.md im Hauptordner, Abschnitt "Sprachdateien".
+Solange index.json fehlt, nutzt Klokkie automatisch die Browserstimme.

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffb4d0">
+<meta name="description" content="Klokkie – leer klokkijken in het Nederlands">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-64.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Klokkie">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Klokkie – leer klokkijken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fff2f7; --bg2:#eaf4ff; --card:#ffffff; --ink:#503a5e; --muted:#8e7b9b;
+  --btn:#ffe4ef; --btn-ink:#8a3d63; --btn-on:#ff7eb0; --btn-on-ink:#ffffff;
+  --shadow:0 10px 30px rgba(190,110,160,.18);
+  --good:#2fae76; --bad:#e8704a;
+  /* klok zelf blijft altijd licht en zacht */
+  --face:#fffdf6; --rim:#ffb4d0; --ear-in:#ffdbe9; --hour:#ff6fa7; --minute:#5fadff;
+  --tick:#d6c2df; --num:#6a4f7c; --eye:#503a5e; --blush:#ffb0c6;
+  --over:#bff3dc; --voorhalf:#fff1a6; --overhalf:#ffd5b5; --voor:#e2d3ff;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#261d31; --bg2:#1b2236; --card:#33283f; --ink:#f6eaf8; --muted:#bca9c8;
+    --btn:#4b3656; --btn-ink:#ffd9ea; --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#261d31; --bg2:#1b2236; --card:#33283f; --ink:#f6eaf8; --muted:#bca9c8;
+  --btn:#4b3656; --btn-ink:#ffd9ea; --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; min-height:100%;
+  font-family:"Fredoka","Baloo 2","Nunito","Comic Sans MS","Segoe UI",system-ui,sans-serif;
+  color:var(--ink); background-color:var(--bg);
+  background-image:radial-gradient(circle at 10% 0%,var(--bg) 0,transparent 55%),linear-gradient(160deg,var(--bg),var(--bg2));
+  background-attachment:fixed;
+  -webkit-tap-highlight-color:transparent;
+}
+.app{max-width:1120px;margin:0 auto;padding:14px clamp(12px,3vw,32px) 28px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(1.6rem,4.5vw,2.4rem);font-weight:700;letter-spacing:.5px}
+h1 span{display:inline-block;transform:rotate(-8deg)}
+.tabs{display:flex;background:var(--card);border-radius:999px;padding:5px;box-shadow:var(--shadow)}
+.tabs button{border:0;background:transparent;color:var(--btn-ink);font:inherit;font-weight:600;font-size:1.05rem;padding:10px 18px;border-radius:999px;cursor:pointer;min-height:46px}
+.tabs button[aria-selected="true"]{background:var(--btn-on);color:var(--btn-on-ink)}
+
+main{display:grid;grid-template-columns:1fr;gap:18px;margin-top:14px;align-items:start}
+@media (min-width:860px){ main{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:center} }
+
+.clock-wrap{display:flex;flex-direction:column;align-items:center}
+#clock{width:min(100%,540px,64vh);min-width:240px;height:auto;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;outline:none;border-radius:40px}
+#clock.dragging{cursor:grabbing}
+#clock:focus-visible{box-shadow:0 0 0 4px var(--minute)}
+.hint{margin:4px 0 0;color:var(--muted);font-size:1.05rem}
+
+.tick{stroke:var(--tick);stroke-width:2;stroke-linecap:round}
+.tick.big{stroke:var(--num);stroke-width:4}
+.num{fill:var(--num);font-size:28px;font-weight:600;text-anchor:middle;dominant-baseline:central;font-family:inherit;pointer-events:none}
+.sector-label{fill:#6a4f7c;font-size:13.5px;font-weight:600;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+#help{opacity:0;transition:opacity .25s}
+#clock.show-help #help{opacity:1}
+.eyes{animation:blink 4.5s infinite;transform-box:fill-box;transform-origin:center}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.happy-face{display:none}
+#clock.happy .happy-face{display:inline}
+#clock.happy .calm-face{display:none}
+#clock.happy{animation:wiggle .5s ease 2}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
+
+.panel{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border-radius:28px;padding:18px;box-shadow:var(--shadow)}
+.readout{text-align:center}
+.digital{
+  display:inline-block;font-size:clamp(2.6rem,9vw,3.8rem);font-weight:700;letter-spacing:3px;
+  background:#4c3a5c;color:#ffe9f3;border-radius:22px;padding:6px 26px;font-variant-numeric:tabular-nums;
+  box-shadow:inset 0 -6px 0 rgba(0,0,0,.18);
+}
+.daypart{color:var(--muted);margin-top:6px;font-size:1.05rem}
+.phrase{font-size:clamp(1.6rem,5.2vw,2.3rem);font-weight:600;margin:8px 0 12px;line-height:1.2;min-height:1.2em}
+.phrase.hidden-answer,.digital.hidden-answer{filter:blur(0)}
+
+button.btn{
+  border:0;background:var(--btn);color:var(--btn-ink);font:inherit;font-weight:600;font-size:1.02rem;
+  border-radius:999px;padding:10px 16px;min-height:48px;cursor:pointer;box-shadow:inset 0 -4px 0 rgba(0,0,0,.07);
+}
+button.btn:active{transform:translateY(2px);box-shadow:none}
+button.btn[aria-pressed="true"]{background:var(--btn-on);color:var(--btn-on-ink)}
+button.btn.primary{background:var(--btn-on);color:var(--btn-on-ink);font-size:1.15rem;padding:12px 22px}
+button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.row + .row{margin-top:10px}
+.voice-note{color:var(--muted);font-size:.92rem;margin-top:8px}
+
+.quiz{text-align:center}
+.levels{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
+.levels button{font-size:.92rem;min-height:42px;padding:8px 12px}
+.task{color:var(--muted);font-size:1.1rem}
+.target{font-size:clamp(1.7rem,5.5vw,2.4rem);font-weight:700;margin:4px 0 12px;color:var(--hour)}
+.feedback{min-height:1.6em;font-size:1.2rem;font-weight:600;margin-top:12px}
+.feedback.good{color:var(--good)} .feedback.bad{color:var(--bad)}
+.score{margin-top:6px;font-size:1.2rem}
+
+.confetti{position:fixed;top:-40px;font-size:28px;pointer-events:none;animation:fall 1.6s ease-in forwards;z-index:10}
+@keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.2}}
+@media (prefers-reduced-motion: reduce){
+  .eyes,#clock.happy{animation:none}
+  .confetti{display:none}
+}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><span>⏰</span> Klokkie</h1>
+    <button class="btn" id="installBtn" hidden>📲 Installeren</button>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tabExplore" aria-selected="true">Ontdekken</button>
+      <button role="tab" id="tabQuiz" aria-selected="false">Oefenen</button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="clock-wrap">
+      <svg id="clock" viewBox="0 30 400 410" tabindex="0" role="slider" aria-label="Klok. Sleep de wijzers of gebruik de pijltjestoetsen." aria-valuemin="0" aria-valuemax="1439">
+        <!-- oortjes -->
+        <polygon points="70,150 62,58 142,86" fill="var(--rim)" stroke="var(--rim)" stroke-width="20" stroke-linejoin="round"/>
+        <polygon points="330,150 338,58 258,86" fill="var(--rim)" stroke="var(--rim)" stroke-width="20" stroke-linejoin="round"/>
+        <polygon points="84,132 80,82 124,98" fill="var(--ear-in)" stroke="var(--ear-in)" stroke-width="8" stroke-linejoin="round"/>
+        <polygon points="316,132 320,82 276,98" fill="var(--ear-in)" stroke="var(--ear-in)" stroke-width="8" stroke-linejoin="round"/>
+        <!-- voetjes -->
+        <ellipse cx="128" cy="408" rx="34" ry="16" fill="var(--rim)"/>
+        <ellipse cx="272" cy="408" rx="34" ry="16" fill="var(--rim)"/>
+        <!-- rand en wijzerplaat -->
+        <circle cx="200" cy="235" r="172" fill="var(--rim)"/>
+        <circle cx="200" cy="235" r="156" fill="var(--face)"/>
+        <!-- hulpvakken -->
+        <g id="help"></g>
+        <g id="ticks"></g>
+        <g id="numbers"></g>
+        <!-- gezichtje -->
+        <g class="calm-face">
+          <g class="eyes">
+            <ellipse cx="174" cy="176" rx="8" ry="11" fill="var(--eye)"/>
+            <ellipse cx="226" cy="176" rx="8" ry="11" fill="var(--eye)"/>
+            <circle cx="177" cy="171" r="3" fill="#fff"/>
+            <circle cx="229" cy="171" r="3" fill="#fff"/>
+          </g>
+          <path d="M191 192 Q200 202 209 192" fill="none" stroke="var(--eye)" stroke-width="4" stroke-linecap="round"/>
+        </g>
+        <g class="happy-face">
+          <path d="M164 180 Q174 166 184 180 M216 180 Q226 166 236 180" fill="none" stroke="var(--eye)" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M187 190 Q200 212 213 190 Z" fill="#ff7a9e" stroke="var(--eye)" stroke-width="3" stroke-linejoin="round"/>
+        </g>
+        <ellipse cx="152" cy="196" rx="13" ry="7" fill="var(--blush)" opacity=".75"/>
+        <ellipse cx="248" cy="196" rx="13" ry="7" fill="var(--blush)" opacity=".75"/>
+        <!-- wijzers: minutenwijzer eerst, uurwijzer erboven -->
+        <g id="minuteHand">
+          <line x1="200" y1="252" x2="200" y2="98" stroke="transparent" stroke-width="40" stroke-linecap="round"/>
+          <line x1="200" y1="250" x2="200" y2="100" stroke="var(--minute)" stroke-width="9" stroke-linecap="round"/>
+          <circle cx="200" cy="100" r="9" fill="var(--minute)"/>
+        </g>
+        <g id="hourHand">
+          <line x1="200" y1="248" x2="200" y2="150" stroke="transparent" stroke-width="46" stroke-linecap="round"/>
+          <line x1="200" y1="246" x2="200" y2="152" stroke="var(--hour)" stroke-width="15" stroke-linecap="round"/>
+          <path d="M200 160 c-6-9-19-4-14 6 l14 12 l14-12 c5-10-8-15-14-6z" fill="#fff" opacity=".9"/>
+        </g>
+        <circle cx="200" cy="235" r="13" fill="#fff" stroke="var(--rim)" stroke-width="5"/>
+      </svg>
+      <p class="hint">Sleep de wijzers! 👆 Roze = uren, blauw = minuten</p>
+    </div>
+
+    <section class="panel">
+      <div class="card readout">
+        <div class="digital" id="digital">00:00</div>
+        <div class="daypart" id="daypart"></div>
+        <div class="phrase" id="phrase" aria-live="polite"></div>
+        <button class="btn primary" id="speakBtn">🔊 Zeg de tijd</button>
+        <div class="voice-note" id="voiceNote" hidden></div>
+      </div>
+
+      <div class="card quiz" id="quizCard" hidden>
+        <div class="levels" id="levels">
+          <button class="btn" data-level="1" aria-pressed="true">Hele &amp; halve uren</button>
+          <button class="btn" data-level="2" aria-pressed="false">Kwartieren</button>
+          <button class="btn" data-level="3" aria-pressed="false">Per 5 minuten</button>
+          <button class="btn" data-level="4" aria-pressed="false">Elke minuut</button>
+        </div>
+        <div class="task">Zet de klok op:</div>
+        <div class="target" id="target"></div>
+        <div class="row">
+          <button class="btn" id="hearTarget">🔊 Luister</button>
+          <button class="btn primary" id="checkBtn">✅ Controleer</button>
+          <button class="btn" id="nextBtn">➡️ Nieuwe opdracht</button>
+        </div>
+        <div class="feedback" id="feedback" aria-live="polite"></div>
+        <div class="score">⭐ <span id="score">0</span></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <button class="btn" id="minus">◀ min</button>
+          <button class="btn" id="plus">min ▶</button>
+          <button class="btn" id="minusH">◀ uur</button>
+          <button class="btn" id="plusH">uur ▶</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="stepBtn" aria-pressed="true">Stapjes van 5 min</button>
+          <button class="btn" id="helpBtn" aria-pressed="false">💡 Hulp</button>
+          <button class="btn" id="ampmBtn" title="Wissel tussen voor en na 12 uur">☀️ ↔ 🌙</button>
+          <button class="btn" id="nowBtn">Nu</button>
+          <button class="btn" id="autoBtn" aria-pressed="true">🗣️ Voorlezen aan</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const CX = 200, CY = 235;
+  const svg = $('clock');
+
+  const state = { total: 0, step: 5, help: false, auto: true, mode: 'explore',
+                  level: 1, target: null, score: 0, checked: false };
+
+  /* ---------- Nederlandse tijd ---------- */
+  const NUM = ['nul','één','twee','drie','vier','vijf','zes','zeven','acht','negen','tien','elf','twaalf','dertien','veertien'];
+  const hourName = h => { h = ((h % 12) + 12) % 12; return NUM[h === 0 ? 12 : h]; };
+  const amount = n => (n === 5 || n === 10) ? NUM[n] : (n === 1 ? 'één minuut' : NUM[n] + ' minuten');
+  function dutchTime(total){
+    const h = Math.floor(total / 60), m = total % 60;
+    const cur = hourName(h), next = hourName(h + 1);
+    if (m === 0)  return cur + ' uur';
+    if (m === 15) return 'kwart over ' + cur;
+    if (m === 30) return 'half ' + next;
+    if (m === 45) return 'kwart voor ' + next;
+    if (m < 15)   return amount(m) + ' over ' + cur;
+    if (m < 30)   return amount(30 - m) + ' voor half ' + next;
+    if (m < 45)   return amount(m - 30) + ' over half ' + next;
+    return amount(60 - m) + ' voor ' + next;
+  }
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  function dayPart(total){
+    const h = Math.floor(total / 60);
+    if (h < 6) return "'s nachts 🌙";
+    if (h < 12) return "'s ochtends 🌅";
+    if (h < 18) return "'s middags ☀️";
+    return "'s avonds 🌆";
+  }
+  const pad = n => String(n).padStart(2, '0');
+
+  /* ---------- klok opbouwen ---------- */
+  function el(tag, attrs, parent){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  const pt = (deg, r) => [CX + r * Math.sin(deg * Math.PI / 180), CY - r * Math.cos(deg * Math.PI / 180)];
+  for (let i = 0; i < 60; i++){
+    const big = i % 5 === 0;
+    const [x1,y1] = pt(i*6, 150), [x2,y2] = pt(i*6, big ? 137 : 143);
+    el('line', {x1,y1,x2,y2,class: big ? 'tick big' : 'tick'}, $('ticks'));
+  }
+  for (let n = 1; n <= 12; n++){
+    const [x,y] = pt(n*30, 117);
+    el('text', {x,y,class:'num'}, $('numbers')).textContent = n;
+  }
+  function wedge(a0, a1, r){
+    const [x0,y0] = pt(a0, r), [x1,y1] = pt(a1, r);
+    return `M${CX} ${CY} L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`;
+  }
+  [[0,'--over','over',45,100],[90,'--voorhalf','voor half',135,88],
+   [180,'--overhalf','over half',225,88],[270,'--voor','voor',315,100]].forEach(([a,c,label,la,lr])=>{
+    el('path', {d: wedge(a, a+90, 155), fill: `var(${c})`, opacity: .85}, $('help'));
+    const [x,y] = pt(la, lr);
+    el('text', {x,y,class:'sector-label'}, $('help')).textContent = label;
+  });
+
+  /* ---------- tekenen ---------- */
+  function render(){
+    const t = state.total, m = t % 60;
+    $('hourHand').setAttribute('transform', `rotate(${(t % 720) / 2} ${CX} ${CY})`);
+    $('minuteHand').setAttribute('transform', `rotate(${m * 6} ${CX} ${CY})`);
+    const hideAnswer = state.mode === 'quiz' && !state.checked;
+    $('digital').textContent = hideAnswer ? '??:??' : pad(Math.floor(t/60)) + ':' + pad(m);
+    $('phrase').textContent = hideAnswer ? 'Wat zegt jouw klok?' : cap(dutchTime(t));
+    $('daypart').textContent = hideAnswer ? '' : dayPart(t);
+    svg.setAttribute('aria-valuenow', t);
+    svg.setAttribute('aria-valuetext', dutchTime(t));
+  }
+  function setTotal(t){
+    t = ((t % 1440) + 1440) % 1440;
+    if (t === state.total) return;
+    state.total = t;
+    if (state.mode === 'quiz' && state.checked){ state.checked = false; }
+    svg.classList.remove('happy');
+    render();
+  }
+
+  /* ---------- spraak ---------- */
+  let nlVoice = null;
+  const canSpeak = 'speechSynthesis' in window;
+  function pickVoice(){
+    if (!canSpeak) return;
+    const vs = speechSynthesis.getVoices();
+    nlVoice = vs.find(v => /^nl[-_]NL/i.test(v.lang)) || vs.find(v => /^nl/i.test(v.lang)) || null;
+  }
+  if (canSpeak){
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+    setTimeout(()=>{
+      pickVoice();
+      if (!nlVoice && !audioIndex){
+        const n = $('voiceNote');
+        n.hidden = false;
+        n.textContent = 'Er is geen Nederlandse stem gevonden op dit apparaat. De tijd wordt misschien met een andere stem voorgelezen.';
+      }
+    }, 1500);
+  } else {
+    $('voiceNote').hidden = false;
+    $('voiceNote').textContent = 'Deze browser kan niet voorlezen. De tijd staat wel op het scherm.';
+  }
+  function speak(text){
+    if (!canSpeak) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'nl-NL';
+    if (nlVoice) u.voice = nlVoice;
+    u.rate = 0.85; u.pitch = 1.15;
+    speechSynthesis.speak(u);
+  }
+
+  /* ---------- geluid: eigen audiobestanden, anders de browserstem ---------- */
+  const AUDIO_BASE = 'audio/';
+  let audioIndex = null;
+  let ctx = null;
+  const buffers = new Map();
+  let playing = [];
+  let seqId = 0;
+  const timeKey = t => 'tijd/' + pad(Math.floor((t % 720) / 60) || 12) + '-' + pad(t % 60);
+  const T = t => [timeKey(t), dutchTime(t)];
+  const CLIP = {
+    hetIs:   ['zin/het-is', 'Het is'],
+    zet:     ['zin/zet-de-klok-op', 'Zet de klok op'],
+    goed:    ['zin/goed-zo', 'Goed zo!'],
+    bijna:   ['zin/bijna', 'Bijna!'],
+    jouw:    ['zin/jouw-klok-zegt', 'Jouw klok zegt'],
+    opnieuw: ['zin/probeer-het-nog-eens', 'Probeer het nog eens.']
+  };
+
+  function ensureCtx(){
+    if (!ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) ctx = new AC();
+    }
+    if (ctx && ctx.state !== 'running') ctx.resume().catch(()=>{});
+  }
+  ['pointerdown','touchend','click','keydown'].forEach(ev =>
+    window.addEventListener(ev, ensureCtx, { capture: true, passive: true }));
+
+  function loadBuf(key){
+    if (buffers.has(key)) return buffers.get(key);
+    const p = fetch(AUDIO_BASE + key + '.mp3')
+      .then(r => { if (!r.ok) throw new Error('ontbreekt: ' + key); return r.arrayBuffer(); })
+      .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)));
+    buffers.set(key, p);
+    p.catch(() => buffers.delete(key));
+    return p;
+  }
+  function stopAll(){
+    playing.forEach(s => { try { s.stop(); } catch(e){} });
+    playing = [];
+    if (canSpeak) speechSynthesis.cancel();
+  }
+  async function say(parts){
+    stopAll();
+    const id = ++seqId;
+    const text = parts.map(p => p[1]).join(' ');
+    if (audioIndex){
+      ensureCtx();
+      if (ctx){
+        try {
+          const bufs = await Promise.all(parts.map(p => loadBuf(p[0])));
+          if (id !== seqId) return;
+          let at = ctx.currentTime + 0.03;
+          for (const b of bufs){
+            const src = ctx.createBufferSource();
+            src.buffer = b; src.connect(ctx.destination); src.start(at);
+            playing.push(src);
+            at += b.duration + 0.12;
+          }
+          return;
+        } catch(e){ console.warn('Audiobestand niet bruikbaar, browserstem wordt gebruikt', e); }
+      }
+    }
+    if (id === seqId) speak(text);
+  }
+
+  async function precacheAudio(j){
+    if (!('caches' in window)) return;
+    const name = 'klokkie-audio-' + j.version;
+    try {
+      for (const k of await caches.keys())
+        if (k.startsWith('klokkie-audio-') && k !== name) await caches.delete(k);
+      const cache = await caches.open(name);
+      const todo = [];
+      for (const f of j.files){
+        const url = new URL(AUDIO_BASE + f, location.href).href;
+        if (!(await cache.match(url))) todo.push(url);
+      }
+      let i = 0;
+      const worker = async () => { while (i < todo.length){ const u = todo[i++]; try { await cache.add(u); } catch(e){} } };
+      await Promise.all(Array.from({ length: 6 }, worker));
+    } catch(e){ console.warn('Offline opslaan van geluid mislukt', e); }
+  }
+
+  fetch(AUDIO_BASE + 'index.json')
+    .then(r => r.ok ? r.json() : null)
+    .then(j => {
+      if (j && Array.isArray(j.files) && j.files.length){
+        audioIndex = j;
+        $('voiceNote').hidden = true;
+        precacheAudio(j);
+      }
+    })
+    .catch(() => {});
+
+  const sayTime = () => say([CLIP.hetIs, T(state.total)]);
+
+  /* ---------- slepen ---------- */
+  let drag = null;
+  function toSvg(e){
+    const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    return p.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function polar(p){
+    const dx = p.x - CX, dy = p.y - CY;
+    let a = Math.atan2(dx, -dy) * 180 / Math.PI; if (a < 0) a += 360;
+    return { ang: a, r: Math.hypot(dx, dy) };
+  }
+  const angDist = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  function moveTo(ang){
+    const step = state.step;
+    if (drag === 'minute'){
+      const m = (Math.round(ang / 6 / step) * step) % 60;
+      let d = m - (state.total % 60);
+      if (d > 30) d -= 60; if (d < -30) d += 60;
+      setTotal(state.total + d);
+    } else {
+      const t12 = (Math.round(ang * 2 / step) * step) % 720;
+      let d = t12 - (state.total % 720);
+      if (d > 360) d -= 720; if (d < -360) d += 720;
+      setTotal(state.total + d);
+    }
+  }
+  svg.addEventListener('pointerdown', e => {
+    const { ang, r } = polar(toSvg(e));
+    if (r > 175) return;
+    const hAng = (state.total % 720) / 2, mAng = (state.total % 60) * 6;
+    if (e.target.closest('#hourHand')) drag = 'hour';
+    else if (e.target.closest('#minuteHand')) drag = 'minute';
+    else if (angDist(ang, hAng) < 25 && r < 110 && (angDist(ang, mAng) >= 25 || r < 90)) drag = 'hour';
+    else drag = 'minute';
+    svg.setPointerCapture(e.pointerId);
+    svg.classList.add('dragging');
+    moveTo(ang);
+    e.preventDefault();
+  });
+  svg.addEventListener('pointermove', e => { if (drag) moveTo(polar(toSvg(e)).ang); });
+  function endDrag(){
+    if (!drag) return;
+    drag = null; svg.classList.remove('dragging');
+    if (state.auto && state.mode === 'explore') sayTime();
+  }
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+
+  let keyTimer;
+  svg.addEventListener('keydown', e => {
+    const map = { ArrowRight: state.step, ArrowLeft: -state.step, ArrowUp: 60, ArrowDown: -60 };
+    if (!(e.key in map)) return;
+    e.preventDefault();
+    setTotal(state.total + map[e.key]);
+    clearTimeout(keyTimer);
+    if (state.auto && state.mode === 'explore') keyTimer = setTimeout(sayTime, 500);
+  });
+
+  /* ---------- knoppen ---------- */
+  function nudge(d){
+    setTotal(state.total + d);
+    if (state.auto && state.mode === 'explore') sayTime();
+  }
+  $('plus').onclick = () => nudge(state.step);
+  $('minus').onclick = () => nudge(-state.step);
+  $('plusH').onclick = () => nudge(60);
+  $('minusH').onclick = () => nudge(-60);
+  $('speakBtn').onclick = () => {
+    if (state.mode === 'quiz' && !state.checked) say([CLIP.zet, T(state.target)]);
+    else sayTime();
+  };
+  function setStep(s){
+    state.step = s;
+    $('stepBtn').setAttribute('aria-pressed', s === 5);
+    $('stepBtn').textContent = s === 5 ? 'Stapjes van 5 min' : 'Stapjes van 1 min';
+  }
+  $('stepBtn').onclick = () => setStep(state.step === 5 ? 1 : 5);
+  $('helpBtn').onclick = () => {
+    state.help = !state.help;
+    svg.classList.toggle('show-help', state.help);
+    $('helpBtn').setAttribute('aria-pressed', state.help);
+  };
+  $('ampmBtn').onclick = () => nudge(720);
+  $('nowBtn').onclick = () => {
+    const d = new Date();
+    setTotal(d.getHours() * 60 + Math.floor(d.getMinutes() / state.step) * state.step);
+    if (state.auto && state.mode === 'explore') sayTime();
+  };
+  $('autoBtn').onclick = () => {
+    state.auto = !state.auto;
+    $('autoBtn').setAttribute('aria-pressed', state.auto);
+    $('autoBtn').textContent = state.auto ? '🗣️ Voorlezen aan' : '🤫 Voorlezen uit';
+    if (!state.auto) stopAll();
+  };
+
+  /* ---------- oefenen ---------- */
+  function newTask(){
+    const opts = {1:[0,30], 2:[0,15,30,45], 3:[...Array(12)].map((_,i)=>i*5), 4:[...Array(60)].map((_,i)=>i)}[state.level];
+    let t;
+    do { t = (Math.floor(Math.random() * 12)) * 60 + opts[Math.floor(Math.random() * opts.length)]; }
+    while (t === state.total % 720);
+    state.target = t; state.checked = false;
+    setStep(state.level === 4 ? 1 : 5);
+    $('target').textContent = cap(dutchTime(t));
+    $('feedback').textContent = ''; $('feedback').className = 'feedback';
+    svg.classList.remove('happy');
+    render();
+    if (state.auto) say([CLIP.zet, T(t)]);
+  }
+  $('levels').addEventListener('click', e => {
+    const b = e.target.closest('button[data-level]'); if (!b) return;
+    state.level = +b.dataset.level;
+    [...$('levels').children].forEach(x => x.setAttribute('aria-pressed', x === b));
+    newTask();
+  });
+  $('hearTarget').onclick = () => say([CLIP.zet, T(state.target)]);
+  $('nextBtn').onclick = newTask;
+  $('checkBtn').onclick = () => {
+    const fb = $('feedback');
+    const mine = dutchTime(state.total);
+    state.checked = true;
+    render();
+    if (state.total % 720 === state.target){
+      state.score++; $('score').textContent = state.score;
+      fb.textContent = 'Super goed! 🎉'; fb.className = 'feedback good';
+      svg.classList.remove('happy'); void svg.getBoundingClientRect(); svg.classList.add('happy');
+      confetti();
+      say([CLIP.goed, CLIP.hetIs, T(state.total)]);
+    } else {
+      fb.textContent = 'Bijna! Jouw klok zegt: ' + mine + '. Probeer het nog eens.';
+      fb.className = 'feedback bad';
+      say([CLIP.bijna, CLIP.jouw, T(state.total), CLIP.opnieuw]);
+    }
+  };
+  function confetti(){
+    const bits = ['⭐','💖','🌸','✨','🍭'];
+    for (let i = 0; i < 22; i++){
+      const s = document.createElement('span');
+      s.className = 'confetti';
+      s.textContent = bits[i % bits.length];
+      s.style.left = Math.random() * 100 + 'vw';
+      s.style.animationDelay = Math.random() * .4 + 's';
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 2200);
+    }
+  }
+
+  /* ---------- modus ---------- */
+  function setMode(mode){
+    state.mode = mode;
+    $('tabExplore').setAttribute('aria-selected', mode === 'explore');
+    $('tabQuiz').setAttribute('aria-selected', mode === 'quiz');
+    $('quizCard').hidden = mode !== 'quiz';
+    $('speakBtn').textContent = mode === 'quiz' ? '🔊 Zeg de opdracht' : '🔊 Zeg de tijd';
+    svg.classList.remove('happy');
+    if (mode === 'quiz') newTask(); else { state.checked = false; render(); }
+  }
+  $('tabExplore').onclick = () => setMode('explore');
+  $('tabQuiz').onclick = () => setMode('quiz');
+
+  /* ---------- start ---------- */
+  const now = new Date();
+  state.total = now.getHours() * 60 + Math.floor(now.getMinutes() / 5) * 5;
+  render();
+})();
+</script>
+
+<script>
+/* PWA: service worker + installatieknop */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW-registratie mislukt', err));
+  });
+}
+let deferredPrompt = null;
+const installBtn = document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.hidden = false;
+});
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  installBtn.hidden = true;
+});
+window.addEventListener('appinstalled', () => { installBtn.hidden = true; });
+</script>
+</body>
+</html>

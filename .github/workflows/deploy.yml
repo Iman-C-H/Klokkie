@@ -1,0 +1,56 @@
+name: Klokkie deployen
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # manuell starten über den Actions-Tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Sprachdateien nur neu erzeugen, wenn sich tools/tts/ ändert
+      - name: Audio-Cache laden
+        uses: actions/cache@v4
+        with:
+          path: audio
+          key: audio-${{ hashFiles('tools/tts/**') }}
+
+      - name: Sprachdateien erzeugen (Piper)
+        run: |
+          docker build -t klokkie-tts tools/tts
+          docker run --rm -v "$PWD/audio:/work/audio" klokkie-tts
+          sudo chown -R "$(id -u):$(id -g)" audio
+
+      - name: Seite zusammenstellen
+        run: |
+          mkdir _site
+          cp -r index.html manifest.webmanifest sw.js icons audio _site/
+          rm -f _site/audio/LIESMICH.txt
+          echo "Dateien im Deployment: $(find _site -type f | wc -l)"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
