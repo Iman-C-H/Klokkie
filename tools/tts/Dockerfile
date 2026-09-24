@@ -19,4 +19,4 @@ RUN mkdir -p /opt/voices \
 
 COPY phrases.tsv generate.sh /opt/klokkie/
 WORKDIR /work
-ENTRYPOINT ["/opt/klokkie/generate.sh"]
+ENTRYPOINT ["bash", "/opt/klokkie/generate.sh"]
