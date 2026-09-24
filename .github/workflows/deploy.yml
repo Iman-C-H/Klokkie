@@ -3,7 +3,10 @@ name: Klokkie deployen
 on:
   push:
     branches: [main]
-  workflow_dispatch:        # manuell starten über den Actions-Tab
+  workflow_dispatch:
+  workflow_run:                       # nach "Stimme erzeugen" automatisch neu veröffentlichen
+    workflows: ["Stimme erzeugen"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -20,18 +23,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Sprachdateien nur neu erzeugen, wenn sich tools/tts/ ändert
-      - name: Audio-Cache laden
+      # Nur für Piper nötig (wenn es noch keine fertige eigene Stimme gibt)
+      - name: Piper-Cache laden
+        if: ${{ hashFiles('voice/index.json') == '' }}
         uses: actions/cache@v4
         with:
           path: audio
-          key: audio-${{ hashFiles('tools/tts/**') }}
+          key: audio-piper-${{ hashFiles('tools/tts/phrases.tsv', 'tools/tts/Dockerfile', 'tools/tts/generate.sh') }}
 
-      - name: Sprachdateien erzeugen (Piper)
+      - name: Sprachdateien bereitstellen
         run: |
-          docker build -t klokkie-tts tools/tts
-          docker run --rm -v "$PWD/audio:/work/audio" klokkie-tts
-          sudo chown -R "$(id -u):$(id -g)" audio
+          if [ -f voice/index.json ]; then
+            echo "Nutze fertige Stimme aus voice/"
+            rm -rf audio && cp -r voice audio
+          else
+            echo "Noch keine fertige eigene Stimme, nutze Piper"
+            docker build -t klokkie-tts tools/tts
+            docker run --rm -v "$PWD/audio:/work/audio" klokkie-tts
+            sudo chown -R "$(id -u):$(id -g)" audio
+          fi
 
       - name: Seite zusammenstellen
         run: |
