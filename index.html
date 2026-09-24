@@ -57,6 +57,7 @@ h1 span{display:inline-block;transform:rotate(-8deg)}
 .tabs{display:flex;background:var(--card);border-radius:999px;padding:5px;box-shadow:var(--shadow)}
 .tabs button{border:0;background:transparent;color:var(--btn-ink);font:inherit;font-weight:600;font-size:1.05rem;padding:10px 18px;border-radius:999px;cursor:pointer;min-height:46px}
 .tabs button[aria-selected="true"]{background:var(--btn-on);color:var(--btn-on-ink)}
+@media (max-width:440px){ .tabs button{padding:9px 11px;font-size:.95rem} }
 
 main{display:grid;grid-template-columns:1fr;gap:18px;margin-top:14px;align-items:start}
 @media (min-width:860px){ main{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:center} }
@@ -66,6 +67,14 @@ main{display:grid;grid-template-columns:1fr;gap:18px;margin-top:14px;align-items
 #clock.dragging{cursor:grabbing}
 #clock:focus-visible{box-shadow:0 0 0 4px var(--minute)}
 .hint{margin:4px 0 0;color:var(--muted);font-size:1.05rem}
+.site-footer{text-align:center;margin-top:28px}
+.credit{margin:0;color:var(--muted);font-size:.8rem;opacity:.8}
+.mic{font-size:1.35rem;padding:16px 30px;min-height:64px;margin:6px 0 4px}
+.mic.listening{background:#ff4f8b;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,79,139,.5)}50%{box-shadow:0 0 0 14px rgba(255,79,139,0)}}
+.choices{display:flex;flex-direction:column;gap:8px;margin:8px auto 0;max-width:420px}
+.choices button{font-size:1.15rem}
+.heard{color:var(--muted);min-height:1.4em;margin-top:8px;font-size:1.05rem}
 
 .tick{stroke:var(--tick);stroke-width:2;stroke-linecap:round}
 .tick.big{stroke:var(--num);stroke-width:4}
@@ -117,7 +126,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
 .confetti{position:fixed;top:-40px;font-size:28px;pointer-events:none;animation:fall 1.6s ease-in forwards;z-index:10}
 @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.2}}
 @media (prefers-reduced-motion: reduce){
-  .eyes,#clock.happy{animation:none}
+  .eyes,#clock.happy,.mic.listening{animation:none}
   .confetti{display:none}
 }
 [hidden]{display:none !important}
@@ -131,6 +140,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     <nav class="tabs" role="tablist">
       <button role="tab" id="tabExplore" aria-selected="true">Ontdekken</button>
       <button role="tab" id="tabQuiz" aria-selected="false">Oefenen</button>
+      <button role="tab" id="tabSay" aria-selected="false">Zeggen 🎤</button>
     </nav>
   </header>
 
@@ -181,7 +191,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
         </g>
         <circle cx="200" cy="235" r="13" fill="#fff" stroke="var(--rim)" stroke-width="5"/>
       </svg>
-      <p class="hint">Sleep de wijzers! 👆 Roze = uren, blauw = minuten</p>
+      <p class="hint" id="dragHint">Sleep de wijzers! 👆 Roze = uren, blauw = minuten</p>
     </div>
 
     <section class="panel">
@@ -193,13 +203,30 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
         <div class="voice-note" id="voiceNote" hidden></div>
       </div>
 
-      <div class="card quiz" id="quizCard" hidden>
-        <div class="levels" id="levels">
+      <div class="card quiz" id="levelCard" hidden>
+        <div class="levels" id="levels" style="margin-bottom:0">
           <button class="btn" data-level="1" aria-pressed="true">Hele &amp; halve uren</button>
           <button class="btn" data-level="2" aria-pressed="false">Kwartieren</button>
           <button class="btn" data-level="3" aria-pressed="false">Per 5 minuten</button>
           <button class="btn" data-level="4" aria-pressed="false">Elke minuut</button>
         </div>
+      </div>
+
+      <div class="card quiz" id="sayCard" hidden>
+        <div class="task">Kijk goed naar de klok.</div>
+        <div class="target">Hoe laat is het?</div>
+        <button class="btn primary mic" id="micBtn">🎤 Zeg het!</button>
+        <div class="choices" id="choices" hidden></div>
+        <div class="heard" id="heard"></div>
+        <div class="feedback" id="sayFeedback" aria-live="polite"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="sayHint">💡 Hulp</button>
+          <button class="btn" id="sayNext">➡️ Nieuwe klok</button>
+        </div>
+        <div class="score">⭐ <span class="scoreVal">0</span></div>
+      </div>
+
+      <div class="card quiz" id="quizCard" hidden>
         <div class="task">Zet de klok op:</div>
         <div class="target" id="target"></div>
         <div class="row">
@@ -208,10 +235,10 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
           <button class="btn" id="nextBtn">➡️ Nieuwe opdracht</button>
         </div>
         <div class="feedback" id="feedback" aria-live="polite"></div>
-        <div class="score">⭐ <span id="score">0</span></div>
+        <div class="score">⭐ <span class="scoreVal">0</span></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="controlsCard">
         <div class="row">
           <button class="btn" id="minus">◀ min</button>
           <button class="btn" id="plus">min ▶</button>
@@ -228,6 +255,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
       </div>
     </section>
   </main>
+  <footer class="site-footer"><p class="credit" id="credit" hidden></p></footer>
 </div>
 
 <script>
@@ -299,9 +327,9 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     const t = state.total, m = t % 60;
     $('hourHand').setAttribute('transform', `rotate(${(t % 720) / 2} ${CX} ${CY})`);
     $('minuteHand').setAttribute('transform', `rotate(${m * 6} ${CX} ${CY})`);
-    const hideAnswer = state.mode === 'quiz' && !state.checked;
+    const hideAnswer = state.mode !== 'explore' && !state.checked;
     $('digital').textContent = hideAnswer ? '??:??' : pad(Math.floor(t/60)) + ':' + pad(m);
-    $('phrase').textContent = hideAnswer ? 'Wat zegt jouw klok?' : cap(dutchTime(t));
+    $('phrase').textContent = hideAnswer ? (state.mode === 'say' ? '👀' : 'Wat zegt jouw klok?') : cap(dutchTime(t));
     $('daypart').textContent = hideAnswer ? '' : dayPart(t);
     svg.setAttribute('aria-valuenow', t);
     svg.setAttribute('aria-valuetext', dutchTime(t));
@@ -363,7 +391,9 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     goed:    ['zin/goed-zo', 'Goed zo!'],
     bijna:   ['zin/bijna', 'Bijna!'],
     jouw:    ['zin/jouw-klok-zegt', 'Jouw klok zegt'],
-    opnieuw: ['zin/probeer-het-nog-eens', 'Probeer het nog eens.']
+    opnieuw: ['zin/probeer-het-nog-eens', 'Probeer het nog eens.'],
+    hoeLaat: ['zin/hoe-laat-is-het', 'Hoe laat is het?'],
+    nietGehoord: ['zin/niet-gehoord', 'Ik heb het niet goed gehoord.']
   };
 
   function ensureCtx(){
@@ -438,6 +468,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
       if (j && Array.isArray(j.files) && j.files.length){
         audioIndex = j;
         $('voiceNote').hidden = true;
+        if (j.credit){ $('credit').textContent = j.credit; $('credit').hidden = false; }
         precacheAudio(j);
       }
     })
@@ -472,6 +503,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     }
   }
   svg.addEventListener('pointerdown', e => {
+    if (state.mode === 'say') return;
     const { ang, r } = polar(toSvg(e));
     if (r > 175) return;
     const hAng = (state.total % 720) / 2, mAng = (state.total % 60) * 6;
@@ -496,7 +528,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
   let keyTimer;
   svg.addEventListener('keydown', e => {
     const map = { ArrowRight: state.step, ArrowLeft: -state.step, ArrowUp: 60, ArrowDown: -60 };
-    if (!(e.key in map)) return;
+    if (!(e.key in map) || state.mode === 'say') return;
     e.preventDefault();
     setTotal(state.total + map[e.key]);
     clearTimeout(keyTimer);
@@ -514,6 +546,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
   $('minusH').onclick = () => nudge(-60);
   $('speakBtn').onclick = () => {
     if (state.mode === 'quiz' && !state.checked) say([CLIP.zet, T(state.target)]);
+    else if (state.mode === 'say' && !state.checked) say([CLIP.hoeLaat]);
     else sayTime();
   };
   function setStep(s){
@@ -547,6 +580,16 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     do { t = (Math.floor(Math.random() * 12)) * 60 + opts[Math.floor(Math.random() * opts.length)]; }
     while (t === state.total % 720);
     state.target = t; state.checked = false;
+    svg.classList.remove('happy');
+    if (state.mode === 'say'){
+      state.total = t + (Math.random() < .5 ? 0 : 720);
+      $('sayFeedback').textContent = ''; $('sayFeedback').className = 'feedback';
+      $('heard').textContent = '';
+      buildChoices();
+      render();
+      if (state.auto) say([CLIP.hoeLaat]);
+      return;
+    }
     setStep(state.level === 4 ? 1 : 5);
     $('target').textContent = cap(dutchTime(t));
     $('feedback').textContent = ''; $('feedback').className = 'feedback';
@@ -568,10 +611,9 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     state.checked = true;
     render();
     if (state.total % 720 === state.target){
-      state.score++; $('score').textContent = state.score;
+      addPoint();
       fb.textContent = 'Super goed! 🎉'; fb.className = 'feedback good';
-      svg.classList.remove('happy'); void svg.getBoundingClientRect(); svg.classList.add('happy');
-      confetti();
+      celebrate();
       say([CLIP.goed, CLIP.hetIs, T(state.total)]);
     } else {
       fb.textContent = 'Bijna! Jouw klok zegt: ' + mine + '. Probeer het nog eens.';
@@ -592,18 +634,174 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     }
   }
 
+  /* ---------- gesproken tijd herkennen ---------- */
+  const WORDNUM = { nul:0, een:1, twee:2, drie:3, vier:4, vijf:5, zes:6, zeven:7, acht:8, negen:9, tien:10,
+    elf:11, twaalf:12, dertien:13, veertien:14, vijftien:15, zestien:16, zeventien:17, achttien:18,
+    negentien:19, twintig:20, dertig:30, veertig:40, vijftig:50 };
+  function wordNum(w){
+    if (/^\d{1,2}$/.test(w)) return +w;
+    if (w in WORDNUM) return WORDNUM[w];
+    const m = w.match(/^(een|twee|drie|vier|vijf|zes|zeven|acht|negen)en(twintig|dertig|veertig|vijftig)$/);
+    return m ? WORDNUM[m[1]] + WORDNUM[m[2]] : null;
+  }
+  const FILLER = new Set(['het','is','de','klok','ongeveer','precies','minuten','minuut','nu','dat','ik','denk','zegt','hij','staat','op','en','eh','ehm','uhm']);
+  const norm12 = (h, m) => ((((h % 12) * 60 + m) % 720) + 720) % 720;
+  function parseDutchTime(raw){
+    let s = String(raw).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const dig = s.match(/(\d{1,2})\s*[:.]\s*(\d{2})/);
+    if (dig && +dig[2] < 60) return norm12(+dig[1], +dig[2]);
+    s = s.replace(/(\d)([a-z])/g, '$1 $2').replace(/([a-z])(\d)/g, '$1 $2').replace(/[^a-z0-9 ]/g, ' ');
+    const t = s.split(/\s+/).filter(w => w && !FILLER.has(w)).map(w => { const n = wordNum(w); return n === null ? w : n; });
+    const isNum = x => typeof x === 'number';
+    const qty = x => x === 'kwart' ? 15 : (isNum(x) ? x : null);
+    // "drie uur" / "drie uur vijftien" / "15 uur 15"
+    const u = t.indexOf('uur');
+    if (u > 0 && isNum(t[u-1])){
+      const m = isNum(t[u+1]) ? t[u+1] : 0;
+      return m < 60 ? norm12(t[u-1], m) : null;
+    }
+    // laatste getal = het uur waar alles op slaat
+    let hi = -1;
+    for (let i = t.length - 1; i >= 0; i--) if (isNum(t[i])) { hi = i; break; }
+    if (hi < 0) return null;
+    const H = t[hi], prev = t[hi-1];
+    if (prev === 'half'){
+      const base = norm12(H - 1, 30);
+      const rel = t[hi-2], q = qty(t[hi-3]);
+      if (rel === 'over' && q !== null && q < 30) return norm12(0, base + q);
+      if (rel === 'voor' && q !== null && q < 30) return norm12(0, base - q);
+      return base;
+    }
+    if (prev === 'over' || prev === 'voor'){
+      const q = qty(t[hi-2]);
+      if (q === null || q >= 30) return null;
+      return prev === 'over' ? norm12(H, q) : norm12(H, -q);
+    }
+    // "drie vijftien" (digitaal uitgesproken)
+    if (hi >= 1 && isNum(prev) && H < 60) return norm12(prev, H);
+    return null;
+  }
+
+  /* ---------- zeggen: kind spreekt de tijd in ---------- */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, listening = false, useChoices = !SR;
+
+  function addPoint(){
+    state.score++;
+    document.querySelectorAll('.scoreVal').forEach(e => e.textContent = state.score);
+  }
+  function celebrate(){
+    svg.classList.remove('happy'); void svg.getBoundingClientRect(); svg.classList.add('happy');
+    confetti();
+  }
+  function micUI(on){
+    listening = on;
+    $('micBtn').classList.toggle('listening', on);
+    $('micBtn').textContent = on ? '👂 Ik luister…' : '🎤 Zeg het!';
+  }
+  function switchToChoices(msg){
+    useChoices = true;
+    $('micBtn').hidden = true;
+    buildChoices();
+    if (msg){ $('sayFeedback').textContent = msg; $('sayFeedback').className = 'feedback'; }
+  }
+  function buildChoices(){
+    const box = $('choices');
+    box.hidden = !useChoices;
+    $('micBtn').hidden = useChoices;
+    if (!useChoices || state.target === null) return;
+    const t = state.target, m = t % 60, cands = [];
+    const add = x => { x = ((x % 720) + 720) % 720; if (x !== t && !cands.includes(x)) cands.push(x); };
+    add(t - 60); add(t + 60);                      // klassieke "half"-fout: een uur ernaast
+    add(t - m + ((60 - m) % 60));                  // over en voor verwisseld
+    add(t + 5); add(t - 5); add(t + 30);
+    const opts = [t, ...cands.sort(() => Math.random() - .5).slice(0, 2)].sort(() => Math.random() - .5);
+    box.innerHTML = '';
+    opts.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.textContent = cap(dutchTime(o));
+      b.onclick = () => checkSpoken(o, dutchTime(o));
+      box.appendChild(b);
+    });
+  }
+  function checkSpoken(parsedTime, heardText){
+    const fb = $('sayFeedback');
+    const alreadyShown = state.checked;
+    state.checked = true;
+    render();
+    if (parsedTime === state.target){
+      if (!alreadyShown) addPoint();
+      fb.textContent = 'Super goed! 🎉'; fb.className = 'feedback good';
+      celebrate();
+      say([CLIP.goed, CLIP.hetIs, T(state.target)]);
+    } else {
+      fb.textContent = (useChoices ? 'Jij koos: ' : 'Jij zei: ') + heardText + '. Het is ' + dutchTime(state.target) + '.';
+      fb.className = 'feedback bad';
+      say([CLIP.bijna, CLIP.hetIs, T(state.target)]);
+    }
+  }
+  function listen(){
+    if (!SR || useChoices) return;
+    if (listening){ try { rec.stop(); } catch(e){} return; }
+    stopAll();
+    $('heard').textContent = '';
+    $('sayFeedback').textContent = ''; $('sayFeedback').className = 'feedback';
+    rec = new SR();
+    rec.lang = 'nl-NL';
+    rec.interimResults = false;
+    rec.continuous = false;
+    rec.maxAlternatives = 5;
+    rec.onstart = () => micUI(true);
+    rec.onend = () => micUI(false);
+    rec.onerror = e => {
+      micUI(false);
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed')
+        switchToChoices('De microfoon mag niet gebruikt worden. Kies het goede antwoord hieronder.');
+      else if (e.error === 'network')
+        switchToChoices('Voor praten is internet nodig. Kies het goede antwoord hieronder.');
+      else if (e.error === 'no-speech'){
+        $('sayFeedback').textContent = 'Ik hoorde niets. Druk op de knop en praat maar!';
+        say([CLIP.nietGehoord, CLIP.opnieuw]);
+      }
+    };
+    rec.onresult = e => {
+      const alts = [...e.results[0]].map(a => a.transcript.trim()).filter(Boolean);
+      $('heard').textContent = alts.length ? 'Ik hoorde: "' + alts[0] + '"' : '';
+      const parsed = alts.map(parseDutchTime);
+      const hit = parsed.indexOf(state.target);
+      if (hit >= 0) return checkSpoken(state.target, alts[hit]);
+      const first = parsed.findIndex(p => p !== null);
+      if (first >= 0) return checkSpoken(parsed[first], dutchTime(parsed[first]));
+      $('sayFeedback').textContent = 'Dat begreep ik niet helemaal. Probeer het nog eens!';
+      $('sayFeedback').className = 'feedback';
+      say([CLIP.nietGehoord, CLIP.opnieuw]);
+    };
+    try { rec.start(); } catch(e){ switchToChoices(); }
+  }
+  $('micBtn').onclick = listen;
+  $('sayNext').onclick = newTask;
+  $('sayHint').onclick = () => $('helpBtn').click();
+
   /* ---------- modus ---------- */
   function setMode(mode){
     state.mode = mode;
     $('tabExplore').setAttribute('aria-selected', mode === 'explore');
     $('tabQuiz').setAttribute('aria-selected', mode === 'quiz');
+    $('tabSay').setAttribute('aria-selected', mode === 'say');
     $('quizCard').hidden = mode !== 'quiz';
-    $('speakBtn').textContent = mode === 'quiz' ? '🔊 Zeg de opdracht' : '🔊 Zeg de tijd';
+    $('sayCard').hidden = mode !== 'say';
+    $('levelCard').hidden = mode === 'explore';
+    $('controlsCard').hidden = mode === 'say';
+    $('dragHint').hidden = mode === 'say';
+    $('speakBtn').textContent = mode === 'quiz' ? '🔊 Zeg de opdracht' : (mode === 'say' ? '🔊 Vraag' : '🔊 Zeg de tijd');
     svg.classList.remove('happy');
-    if (mode === 'quiz') newTask(); else { state.checked = false; render(); }
+    svg.style.cursor = mode === 'say' ? 'default' : '';
+    if (listening && rec) { try { rec.abort(); } catch(e){} }
+    if (mode !== 'explore') newTask(); else { state.checked = false; render(); }
   }
   $('tabExplore').onclick = () => setMode('explore');
   $('tabQuiz').onclick = () => setMode('quiz');
+  $('tabSay').onclick = () => setMode('say');
 
   /* ---------- start ---------- */
   const now = new Date();
