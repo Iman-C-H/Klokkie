@@ -1,0 +1,61 @@
+name: Stimme erzeugen
+
+on:
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: 'Nur Hörprobe (8 Sätze, Download unter "Artifacts")'
+        type: boolean
+        default: true
+      neu:
+        description: 'Vorhandene Sprachdateien löschen und komplett neu erzeugen'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    env:
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
+      ELEVENLABS_MODEL: ${{ vars.ELEVENLABS_MODEL || 'eleven_multilingual_v2' }}
+      ELEVENLABS_LANGUAGE: ${{ vars.ELEVENLABS_LANGUAGE }}
+      PITCH: ${{ vars.PITCH || '1.0' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ffmpeg installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+
+      - name: Hörprobe erzeugen
+        if: ${{ inputs.probe }}
+        run: |
+          grep -E '^(zin/het-is|zin/zet-de-klok-op|zin/goed-zo|tijd/03-15|tijd/03-20|tijd/03-30|tijd/03-45|tijd/04-00)\b' \
+            tools/tts/phrases.tsv > /tmp/probe.tsv
+          TSV=/tmp/probe.tsv OUT=probe FORCE=1 python3 tools/tts/elevenlabs_generate.py
+
+      - name: Hörprobe zum Download bereitstellen
+        if: ${{ inputs.probe }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hoerprobe
+          path: probe/
+
+      - name: Alle Sprachdateien erzeugen
+        if: ${{ !inputs.probe }}
+        env:
+          FORCE: ${{ inputs.neu && '1' || '0' }}
+        run: python3 tools/tts/elevenlabs_generate.py
+
+      - name: Im Repository speichern
+        if: ${{ !inputs.probe }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A voice
+          if git diff --cached --quiet; then echo "Keine Änderungen"; exit 0; fi
+          git commit -m "Stimme aktualisiert"
+          git push
