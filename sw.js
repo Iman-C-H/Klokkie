@@ -1,7 +1,7 @@
 /* Klokkie service worker
    Bei jeder Änderung an index.html o. Ä. VERSION hochzählen,
    damit alle Geräte die neue Version laden. */
-const VERSION = 'klokkie-v7';
+const VERSION = 'klokkie-v8';
 const APP_SHELL = [
   './',
   './index.html',
