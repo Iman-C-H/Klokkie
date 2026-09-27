@@ -40,6 +40,47 @@
   --bg:#261d31; --bg2:#1b2236; --card:#33283f; --ink:#f6eaf8; --muted:#bca9c8;
   --btn:#4b3656; --btn-ink:#ffd9ea; --shadow:0 10px 30px rgba(0,0,0,.35);
 }
+:root{ --ear:#ffb4d0; --muzzle:#f3dfc9; --nose:#5a3d2b; --lcd:#4c3a5c; --lcd-ink:#ffe9f3; }
+/* Beer: bruin met snuitje, blauwe knoppen */
+:root[data-look="bear"]{
+  --bg:#eef5ff; --bg2:#fbf1e6; --ink:#233a5e; --muted:#6b7f9e;
+  --btn:#e1edff; --btn-ink:#1f4b8f; --btn-on:#3a86ff; --btn-on-ink:#ffffff;
+  --shadow:0 10px 30px rgba(70,110,190,.18);
+  --rim:#b8805a; --ear:#b8805a; --ear-in:#ecc9a6; --muzzle:#f3dfc9; --nose:#5a3d2b;
+  --hour:#2f6fe0; --minute:#e0892f;
+  --num:#5a3d2b; --eye:#3d2a1f; --tick:#dccbbb; --blush:#ffb9a0;
+  --lcd:#1f3a6b; --lcd-ink:#e6f0ff;
+}
+@media (prefers-color-scheme: dark){
+  :root[data-look="bear"]:not([data-theme="light"]){
+    --bg:#16203a; --bg2:#1e1a2c; --card:#223052; --ink:#eaf2ff; --muted:#a9bbdb;
+    --btn:#2f4470; --btn-ink:#d6e6ff; --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-look="bear"][data-theme="dark"]{
+  --bg:#16203a; --bg2:#1e1a2c; --card:#223052; --ink:#eaf2ff; --muted:#a9bbdb;
+  --btn:#2f4470; --btn-ink:#d6e6ff; --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+.bear-only{display:none}
+:root[data-look="bear"] .bear-only{display:inline}
+:root[data-look="bear"] .kitty-only{display:none}
+
+.brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.look-switch{
+  display:flex;align-items:center;gap:8px;border:0;background:var(--card);color:var(--ink);
+  box-shadow:var(--shadow);border-radius:999px;padding:6px 12px;font:inherit;cursor:pointer;min-height:48px;
+}
+.look-switch .ic{font-size:1.4rem;line-height:1;transition:opacity .2s,transform .2s;opacity:.4;transform:scale(.9)}
+.look-switch .ic.cat{opacity:1;transform:scale(1.1)}
+:root[data-look="bear"] .look-switch .ic.cat{opacity:.4;transform:scale(.9)}
+:root[data-look="bear"] .look-switch .ic.bear{opacity:1;transform:scale(1.1)}
+.look-switch .track{position:relative;width:56px;height:30px;border-radius:999px;background:var(--btn);box-shadow:inset 0 2px 5px rgba(0,0,0,.18)}
+.look-switch .knob{
+  position:absolute;top:2px;left:2px;width:26px;height:26px;border-radius:50%;
+  background:var(--btn-on);box-shadow:0 3px 6px rgba(0,0,0,.28), inset 0 -3px 0 rgba(0,0,0,.12);
+  transition:transform .3s cubic-bezier(.5,1.7,.45,1),background .3s;
+}
+:root[data-look="bear"] .look-switch .knob{transform:translateX(26px)}
 *,*::before,*::after{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{
@@ -69,18 +110,22 @@ main{display:grid;grid-template-columns:1fr;gap:18px;margin-top:14px;align-items
 .hint{margin:4px 0 0;color:var(--muted);font-size:1.05rem}
 .site-footer{text-align:center;margin-top:28px}
 .credit{margin:0;color:var(--muted);font-size:.8rem;opacity:.8}
-.mic{font-size:1.35rem;padding:16px 30px;min-height:64px;margin:6px 0 4px}
+.mic{font-size:1.3rem;padding:14px 28px;min-height:60px;margin:14px 0 2px}
 .mic.listening{background:#ff4f8b;animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,79,139,.5)}50%{box-shadow:0 0 0 14px rgba(255,79,139,0)}}
 .choices{display:flex;flex-direction:column;gap:8px;margin:8px auto 0;max-width:420px}
 .choices button{font-size:1.15rem}
 .heard{color:var(--muted);min-height:1.4em;margin-top:8px;font-size:1.05rem}
+.heard:empty,.feedback:empty{min-height:0;margin:0}
 
 .tick{stroke:var(--tick);stroke-width:2;stroke-linecap:round}
 .tick.big{stroke:var(--num);stroke-width:4}
 .num{fill:var(--num);font-size:28px;font-weight:600;text-anchor:middle;dominant-baseline:central;font-family:inherit;pointer-events:none}
 .sector-label{fill:#6a4f7c;font-size:13.5px;font-weight:600;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 #help{opacity:0;transition:opacity .25s}
+#hours24{opacity:0;transition:opacity .3s;pointer-events:none}
+#clock.show-24 #hours24{opacity:1}
+.h24{fill:var(--hour);font-size:16px;font-weight:700;text-anchor:middle;dominant-baseline:central;font-family:inherit}
 #clock.show-help #help{opacity:1}
 .eyes{animation:blink 4.5s infinite;transform-box:fill-box;transform-origin:center}
 @keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
@@ -95,7 +140,7 @@ main{display:grid;grid-template-columns:1fr;gap:18px;margin-top:14px;align-items
 .readout{text-align:center}
 .digital{
   display:inline-block;font-size:clamp(2.6rem,9vw,3.8rem);font-weight:700;letter-spacing:3px;
-  background:#4c3a5c;color:#ffe9f3;border-radius:22px;padding:6px 26px;font-variant-numeric:tabular-nums;
+  background:var(--lcd);color:var(--lcd-ink);border-radius:22px;padding:6px 26px;font-variant-numeric:tabular-nums;
   box-shadow:inset 0 -6px 0 rgba(0,0,0,.18);
 }
 .daypart{color:var(--muted);margin-top:6px;font-size:1.05rem}
@@ -115,7 +160,9 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
 .voice-note{color:var(--muted);font-size:.92rem;margin-top:8px}
 
 .quiz{text-align:center}
-.levels{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
+.levels{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.divider{border-top:2px dashed var(--btn);margin:14px 4px}
+#quizTop .target{margin-bottom:8px}
 .levels button{font-size:.92rem;min-height:42px;padding:8px 12px}
 .task{color:var(--muted);font-size:1.1rem}
 .target{font-size:clamp(1.7rem,5.5vw,2.4rem);font-weight:700;margin:4px 0 12px;color:var(--hour)}
@@ -126,6 +173,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
 .confetti{position:fixed;top:-40px;font-size:28px;pointer-events:none;animation:fall 1.6s ease-in forwards;z-index:10}
 @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:.2}}
 @media (prefers-reduced-motion: reduce){
+  .look-switch .knob,.look-switch .ic{transition:none}
   .eyes,#clock.happy,.mic.listening{animation:none}
   .confetti{display:none}
 }
@@ -135,7 +183,14 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
 <body>
 <div class="app">
   <header>
-    <h1><span>⏰</span> Klokkie</h1>
+    <div class="brand">
+      <h1><span>⏰</span> Klokkie</h1>
+      <button class="look-switch" id="lookSwitch" role="switch" aria-checked="false" aria-label="Wissel tussen poes en beer">
+        <span class="ic cat" aria-hidden="true">🐱</span>
+        <span class="track" aria-hidden="true"><span class="knob"></span></span>
+        <span class="ic bear" aria-hidden="true">🐻</span>
+      </button>
+    </div>
     <button class="btn" id="installBtn" hidden>📲 Installeren</button>
     <nav class="tabs" role="tablist">
       <button role="tab" id="tabExplore" aria-selected="true">Ontdekken</button>
@@ -146,12 +201,21 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
 
   <main>
     <div class="clock-wrap">
-      <svg id="clock" viewBox="0 30 400 410" tabindex="0" role="slider" aria-label="Klok. Sleep de wijzers of gebruik de pijltjestoetsen." aria-valuemin="0" aria-valuemax="1439">
-        <!-- oortjes -->
-        <polygon points="70,150 62,58 142,86" fill="var(--rim)" stroke="var(--rim)" stroke-width="20" stroke-linejoin="round"/>
-        <polygon points="330,150 338,58 258,86" fill="var(--rim)" stroke="var(--rim)" stroke-width="20" stroke-linejoin="round"/>
-        <polygon points="84,132 80,82 124,98" fill="var(--ear-in)" stroke="var(--ear-in)" stroke-width="8" stroke-linejoin="round"/>
-        <polygon points="316,132 320,82 276,98" fill="var(--ear-in)" stroke="var(--ear-in)" stroke-width="8" stroke-linejoin="round"/>
+      <svg id="clock" viewBox="-16 24 432 420" tabindex="0" role="slider" aria-label="Klok. Sleep de wijzers of gebruik de pijltjestoetsen." aria-valuemin="0" aria-valuemax="1439">
+        <!-- berenoortjes -->
+        <g class="bear-only">
+          <circle cx="98" cy="94" r="36" fill="var(--ear)"/>
+          <circle cx="302" cy="94" r="36" fill="var(--ear)"/>
+          <circle cx="101" cy="98" r="19" fill="var(--ear-in)"/>
+          <circle cx="299" cy="98" r="19" fill="var(--ear-in)"/>
+        </g>
+        <!-- poezenoortjes -->
+        <g class="kitty-only">
+          <polygon points="70,150 62,58 142,86" fill="var(--rim)" stroke="var(--rim)" stroke-width="20" stroke-linejoin="round"/>
+          <polygon points="330,150 338,58 258,86" fill="var(--rim)" stroke="var(--rim)" stroke-width="20" stroke-linejoin="round"/>
+          <polygon points="84,132 80,82 124,98" fill="var(--ear-in)" stroke="var(--ear-in)" stroke-width="8" stroke-linejoin="round"/>
+          <polygon points="316,132 320,82 276,98" fill="var(--ear-in)" stroke="var(--ear-in)" stroke-width="8" stroke-linejoin="round"/>
+        </g>
         <!-- voetjes -->
         <ellipse cx="128" cy="408" rx="34" ry="16" fill="var(--rim)"/>
         <ellipse cx="272" cy="408" rx="34" ry="16" fill="var(--rim)"/>
@@ -163,6 +227,10 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
         <g id="ticks"></g>
         <g id="numbers"></g>
         <!-- gezichtje -->
+        <g class="bear-only">
+          <ellipse cx="200" cy="196" rx="22" ry="15" fill="var(--muzzle)"/>
+          <ellipse cx="200" cy="187" rx="8" ry="5.5" fill="var(--nose)"/>
+        </g>
         <g class="calm-face">
           <g class="eyes">
             <ellipse cx="174" cy="176" rx="8" ry="11" fill="var(--eye)"/>
@@ -187,70 +255,78 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
         <g id="hourHand">
           <line x1="200" y1="248" x2="200" y2="150" stroke="transparent" stroke-width="46" stroke-linecap="round"/>
           <line x1="200" y1="246" x2="200" y2="152" stroke="var(--hour)" stroke-width="15" stroke-linecap="round"/>
-          <path d="M200 160 c-6-9-19-4-14 6 l14 12 l14-12 c5-10-8-15-14-6z" fill="#fff" opacity=".9"/>
+          <path class="kitty-only" d="M200 160 c-6-9-19-4-14 6 l14 12 l14-12 c5-10-8-15-14-6z" fill="#fff" opacity=".9"/>
+          <polygon class="bear-only" points="200,155 203.5,163.2 212.4,164 205.7,169.9 207.6,178.6 200,174 192.4,178.6 194.3,169.9 187.6,164 196.5,163.2" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round" opacity=".95"/>
         </g>
         <circle cx="200" cy="235" r="13" fill="#fff" stroke="var(--rim)" stroke-width="5"/>
+        <g id="hours24" aria-hidden="true"></g>
       </svg>
-      <p class="hint" id="dragHint">Sleep de wijzers! 👆 Roze = uren, blauw = minuten</p>
+      <p class="hint" id="dragHint">Sleep de wijzers! 👆 <span class="kitty-only">Roze = uren, blauw = minuten</span><span class="bear-only">Blauw = uren, oranje = minuten</span></p>
     </div>
 
     <section class="panel">
       <div class="card readout">
+        <div id="quizTop" class="quiz" hidden>
+          <div class="task">Zet de klok op:</div>
+          <div class="target" id="target"></div>
+          <div class="row" id="quizSpeakSlot"></div>
+          <div class="divider"></div>
+          <div class="task">Wat zegt jouw klok?</div>
+        </div>
+        <div id="sayTop" class="quiz" hidden>
+          <div class="task">Kijk goed naar de klok.</div>
+          <div class="target">Hoe laat is het?</div>
+          <div class="row" id="saySpeakSlot"></div>
+          <div class="divider"></div>
+        </div>
         <div class="digital" id="digital">00:00</div>
         <div class="daypart" id="daypart"></div>
         <div class="phrase" id="phrase" aria-live="polite"></div>
-        <button class="btn primary" id="speakBtn">🔊 Zeg de tijd</button>
+        <div class="row" id="speakSlot"><button class="btn primary" id="speakBtn">🔊 Zeg de tijd</button></div>
         <div class="voice-note" id="voiceNote" hidden></div>
-      </div>
-
-      <div class="card quiz" id="sayCard" hidden>
-        <div class="task">Kijk goed naar de klok.</div>
-        <div class="target">Hoe laat is het?</div>
-        <button class="btn primary mic" id="micBtn">🎤 Zeg het!</button>
-        <div class="choices" id="choices" hidden></div>
-        <div class="heard" id="heard"></div>
-        <div class="feedback" id="sayFeedback" aria-live="polite"></div>
-        <div class="row" style="margin-top:10px">
-          <button class="btn" id="sayHint">💡 Hulp</button>
-          <button class="btn" id="sayNext">➡️ Nieuwe klok</button>
+        <div id="sayCard" class="quiz" hidden>
+          <button class="btn primary mic" id="micBtn">🎤 Zeg het!</button>
+          <div class="choices" id="choices" hidden></div>
+          <div class="heard" id="heard"></div>
+          <div class="feedback" id="sayFeedback" aria-live="polite"></div>
+          <div class="row" style="margin-top:6px">
+            <button class="btn" id="sayHint">💡 Hulp</button>
+            <button class="btn" id="sayNext">➡️ Nieuwe klok</button>
+          </div>
+          <div class="score">⭐ <span class="scoreVal">0</span></div>
         </div>
-        <div class="score">⭐ <span class="scoreVal">0</span></div>
-      </div>
-
-      <div class="card quiz" id="quizCard" hidden>
-        <div class="task">Zet de klok op:</div>
-        <div class="target" id="target"></div>
-        <div class="row">
-          <button class="btn" id="hearTarget">🔊 Luister</button>
-          <button class="btn primary" id="checkBtn">✅ Controleer</button>
-          <button class="btn" id="nextBtn">➡️ Nieuwe opdracht</button>
-        </div>
-        <div class="feedback" id="feedback" aria-live="polite"></div>
-        <div class="score">⭐ <span class="scoreVal">0</span></div>
-      </div>
-
-        <div class="card quiz" id="levelCard" hidden>
-        <div class="levels" id="levels" style="margin-bottom:0">
-          <button class="btn" data-level="1" aria-pressed="true">Hele &amp; halve uren</button>
-          <button class="btn" data-level="2" aria-pressed="false">Kwartieren</button>
-          <button class="btn" data-level="3" aria-pressed="false">Per 5 minuten</button>
-          <button class="btn" data-level="4" aria-pressed="false">Elke minuut</button>
+        <div id="quizCard" class="quiz" hidden>
+          <div class="row" style="margin-top:12px">
+            <button class="btn primary" id="checkBtn">✅ Controleer</button>
+            <button class="btn" id="nextBtn">➡️ Nieuwe opdracht</button>
+          </div>
+          <div class="feedback" id="feedback" aria-live="polite"></div>
+          <div class="score">⭐ <span class="scoreVal">0</span></div>
         </div>
       </div>
-      
+
       <div class="card" id="controlsCard">
-        <div class="row">
+        <div class="row" id="rowMin">
           <button class="btn" id="minus">◀ min</button>
           <button class="btn" id="plus">min ▶</button>
           <button class="btn" id="minusH">◀ uur</button>
           <button class="btn" id="plusH">uur ▶</button>
         </div>
-        <div class="row">
+        <div class="row" id="rowOpts">
           <button class="btn" id="stepBtn" aria-pressed="true">Stapjes van 5 min</button>
           <button class="btn" id="helpBtn" aria-pressed="false">💡 Hulp</button>
           <button class="btn" id="ampmBtn" title="Wissel tussen voor en na 12 uur">☀️ ↔ 🌙</button>
           <button class="btn" id="nowBtn">Nu</button>
           <button class="btn" id="autoBtn" aria-pressed="true">🗣️ Voorlezen aan</button>
+        </div>
+        <div id="levelCard" hidden>
+          <div class="divider" id="levelDivider"></div>
+          <div class="levels" id="levels">
+            <button class="btn" data-level="1" aria-pressed="true">Hele &amp; halve uren</button>
+            <button class="btn" data-level="2" aria-pressed="false">Kwartieren</button>
+            <button class="btn" data-level="3" aria-pressed="false">Per 5 minuten</button>
+            <button class="btn" data-level="4" aria-pressed="false">Elke minuut</button>
+          </div>
         </div>
       </div>
     </section>
@@ -311,6 +387,28 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     const [x,y] = pt(n*30, 117);
     el('text', {x,y,class:'num'}, $('numbers')).textContent = n;
   }
+
+  /* ---------- uiterlijk: poes of beer ---------- */
+  const THEME_COLOR = { kitty: '#ffb4d0', bear: '#b8805a' };
+  function setLook(look){
+    document.documentElement.setAttribute('data-look', look);
+    $('lookSwitch').setAttribute('aria-checked', look === 'bear');
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', THEME_COLOR[look]);
+    try { localStorage.setItem('klokkie-look', look); } catch(e){}
+  }
+  let savedLook = 'kitty';
+  try { const v = localStorage.getItem('klokkie-look'); savedLook = v === 'bear' ? 'bear' : 'kitty'; } catch(e){}
+  setLook(savedLook);
+  $('lookSwitch').onclick = () =>
+    setLook(document.documentElement.getAttribute('data-look') === 'bear' ? 'kitty' : 'bear');
+
+  for (let n = 1; n <= 12; n++){
+    const [x, y] = pt(n * 30, 193);
+    el('rect', {x: x - 17, y: y - 12, width: 34, height: 24, rx: 12, fill: '#fff', stroke: 'var(--rim)', 'stroke-width': 2.5}, $('hours24'));
+    el('text', {x, y: y + 1, class: 'h24'}, $('hours24')).textContent = n === 12 ? '00' : String(n + 12);
+  }
+
   function wedge(a0, a1, r){
     const [x0,y0] = pt(a0, r), [x1,y1] = pt(a1, r);
     return `M${CX} ${CY} L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z`;
@@ -329,8 +427,9 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     $('minuteHand').setAttribute('transform', `rotate(${m * 6} ${CX} ${CY})`);
     const hideAnswer = state.mode !== 'explore' && !state.checked;
     $('digital').textContent = hideAnswer ? '??:??' : pad(Math.floor(t/60)) + ':' + pad(m);
-    $('phrase').textContent = hideAnswer ? (state.mode === 'say' ? '👀' : 'Wat zegt jouw klok?') : cap(dutchTime(t));
+    $('phrase').textContent = hideAnswer ? (state.mode === 'say' ? '👀' : '🤔') : cap(dutchTime(t));
     $('daypart').textContent = hideAnswer ? '' : dayPart(t);
+    svg.classList.toggle('show-24', state.help && t >= 720);
     svg.setAttribute('aria-valuenow', t);
     svg.setAttribute('aria-valuetext', dutchTime(t));
   }
@@ -559,6 +658,7 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     state.help = !state.help;
     svg.classList.toggle('show-help', state.help);
     $('helpBtn').setAttribute('aria-pressed', state.help);
+    render();
   };
   $('ampmBtn').onclick = () => nudge(720);
   $('nowBtn').onclick = () => {
@@ -603,7 +703,6 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     [...$('levels').children].forEach(x => x.setAttribute('aria-pressed', x === b));
     newTask();
   });
-  $('hearTarget').onclick = () => say([CLIP.zet, T(state.target)]);
   $('nextBtn').onclick = newTask;
   $('checkBtn').onclick = () => {
     const fb = $('feedback');
@@ -622,7 +721,8 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     }
   };
   function confetti(){
-    const bits = ['⭐','💖','🌸','✨','🍭'];
+    const bits = document.documentElement.getAttribute('data-look') === 'bear'
+      ? ['⭐','🐻','⚽','✨','🚀'] : ['⭐','💖','🌸','✨','🍭'];
     for (let i = 0; i < 22; i++){
       const s = document.createElement('span');
       s.className = 'confetti';
@@ -791,9 +891,15 @@ button:focus-visible{outline:3px solid var(--minute);outline-offset:2px}
     $('quizCard').hidden = mode !== 'quiz';
     $('sayCard').hidden = mode !== 'say';
     $('levelCard').hidden = mode === 'explore';
-    $('controlsCard').hidden = mode === 'say';
+    $('rowMin').hidden = $('rowOpts').hidden = mode === 'say';
+    $('levelDivider').hidden = mode === 'say';
+    $('quizTop').hidden = mode !== 'quiz';
+    $('sayTop').hidden = mode !== 'say';
+    (mode === 'quiz' ? $('quizSpeakSlot') : mode === 'say' ? $('saySpeakSlot') : $('speakSlot')).appendChild($('speakBtn'));
+    $('speakSlot').hidden = mode !== 'explore';
+    $('speakBtn').classList.toggle('primary', mode === 'explore');
     $('dragHint').hidden = mode === 'say';
-    $('speakBtn').textContent = mode === 'quiz' ? '🔊 Zeg de opdracht' : (mode === 'say' ? '🔊 Vraag' : '🔊 Zeg de tijd');
+    $('speakBtn').textContent = mode === 'quiz' ? '🔊 Zeg de opdracht' : (mode === 'say' ? '🔊 Luister' : '🔊 Zeg de tijd');
     svg.classList.remove('happy');
     svg.style.cursor = mode === 'say' ? 'default' : '';
     if (listening && rec) { try { rec.abort(); } catch(e){} }
