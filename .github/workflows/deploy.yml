@@ -23,31 +23,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Nur für Piper nötig (wenn es noch keine fertige eigene Stimme gibt)
-      - name: Piper-Cache laden
-        if: ${{ hashFiles('voice/index.json') == '' }}
-        uses: actions/cache@v4
-        with:
-          path: audio
-          key: audio-piper-${{ hashFiles('tools/tts/phrases.tsv', 'tools/tts/Dockerfile', 'tools/tts/generate.sh') }}
-
       - name: Sprachdateien bereitstellen
         run: |
+          mkdir -p _site/audio
           if [ -f voice/index.json ]; then
-            echo "Nutze fertige Stimme aus voice/"
-            rm -rf audio && cp -r voice audio
+            echo "Nutze fertige ElevenLabs-Stimme aus voice/"
+            cp -r voice/. _site/audio/
           else
-            echo "Noch keine fertige eigene Stimme, nutze Piper"
-            docker build -t klokkie-tts tools/tts
-            docker run --rm -v "$PWD/audio:/work/audio" klokkie-tts
-            sudo chown -R "$(id -u):$(id -g)" audio
+            echo "Noch keine fertige Stimme: App nutzt die Stimme des Geräts"
+            echo '{"version":"geen","files":[]}' > _site/audio/index.json
           fi
 
       - name: Seite zusammenstellen
         run: |
-          mkdir _site
-          cp -r index.html manifest.webmanifest sw.js icons audio _site/
-          rm -f _site/audio/LIESMICH.txt
+          cp -r index.html manifest.webmanifest sw.js icons _site/
           echo "Dateien im Deployment: $(find _site -type f | wc -l)"
 
       - uses: actions/configure-pages@v5
